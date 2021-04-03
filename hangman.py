@@ -218,9 +218,93 @@ class Player:
         """
         raise NotImplementedError
 
+class HumanPlayer(Player):
+    """A class representing a Human Player in the Hangman Game.
 
-# Replace this comment with your implementation of the HumanPlayer and
-# ComputerPlayer classes.
+    Attributes:
+        name (str): the player's name.
+    """
+
+    def turn(self, state):
+        """Take a turn. Print current state of the game and expect user's
+        input, which is returned to the Game.
+
+        Args:
+            state (GameState): a snapshot of the current state of the game.
+        
+        Returns:
+            str: the guess typed in by the player (a letter or a word).
+        """
+        print(state)
+        return input('{}, guess a letter or type a word to solve the puzzle:'\
+            .format(self.name))
+
+
+class ComputerPlayer(Player):
+    """A class representing a Computer Player in the Hangman Game. The game
+    logic is implemented in the turn() method, which is using two helper
+    methods _guess_word_() and _guess_vowel_() to guess a word and a vowel
+    letter respectively.
+
+    Attributes:
+        name (str): the player's name assined automatically.
+        vocab (set of str): a vocabulary of words the computer player can use
+        to guess the right answer.
+    """
+
+    def __init__(self, name, vocab):
+        self.name = name
+        self.vocab = vocab
+
+    def turn(self, state):
+        """Take a turn. Depending on the state of the game the Computer Player
+        imlements the following logic:
+        1) If less than a third of the letters are guessed, the computer will
+        try to guess an unguessed vowel letter, or a random one if all vowels
+        were tried.
+        2) If more than a third of the letters were guessed, the computer will
+        attempt to guess the entire word, by going through its vocabulary and
+        matching the words using state.match() method, excluding the words that
+        were tried or contain a wrongly guessed letter.
+        3) If neither option 1) or 2) are valid, the computer will randomly
+        guess an unguessed letter.
+
+        Args:
+            state (GameState): a snapshot of the current state of the game.
+
+        Returns:
+            str: the computer player's guess (a letter or a word).
+        """
+        word_options = list()
+        if (len(state.good_guesses) * 2 <= state.blank_count):
+            return self._guess_vowel_(state)
+        else:
+            word_options = self._guess_word_(state)
+        if len(word_options) > 0 and len(word_options) < 3:
+            return choice(list(word_options))
+        return choice(list(state.unguessed))
+
+    def _guess_word_(self, state):
+        matching_words = set()
+        for word in self.vocab:
+            if state.match(str(word)):
+                matching_words.add(word)
+        words_guessed_chars = set()
+        for word in matching_words:
+            for bad_guess in state.bad_guesses:
+                if word.find(bad_guess) > -1:
+                    words_guessed_chars.add(word)
+        matching_words = matching_words.difference(state.guessed_words)
+        matching_words = matching_words.difference(words_guessed_chars)
+        return matching_words
+
+    def _guess_vowel_(self, state):
+        unguessed_vowels = set(['A', 'E', 'I', 'O', 'U']).difference(
+            state.guesses)
+        if len(unguessed_vowels) > 0:
+            return choice(list(unguessed_vowels))
+        else:
+            return choice(list(state.unguessed))
 
 
 def main(wordlist, human_players, computer_player=False, computer_vocab=None):
